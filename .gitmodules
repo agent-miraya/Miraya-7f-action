@@ -1,0 +1,3 @@
+[submodule "lit-wrapper-sdk"]
+	path = lit-wrapper-sdk
+	url = git@github.com:LIT-Protocol/lit-wrapper-sdk.git
