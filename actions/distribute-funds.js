@@ -7982,7 +7982,7 @@
     }
   });
 
-  // src/actions/solana-transction.js
+  // src/actions/distribute-funds.js
   init_esbuild_shims();
 
   // node_modules/.pnpm/@solana+web3.js@1.98.0_bufferutil@4.0.8_utf-8-validate@5.0.10/node_modules/@solana/web3.js/lib/index.browser.esm.js
@@ -14981,7 +14981,7 @@ Message: ${transactionMessage}.
     })
   }));
   function createRpcClient(url, httpHeaders, customFetch, fetchMiddleware, disableRetryOnRateLimit, httpAgent) {
-    const fetch = customFetch ? customFetch : fetchImpl;
+    const fetch2 = customFetch ? customFetch : fetchImpl;
     let agent;
     {
       if (httpAgent != null) {
@@ -14998,7 +14998,7 @@ Message: ${transactionMessage}.
             reject(error);
           }
         });
-        return await fetch(...modifiedFetchArgs);
+        return await fetch2(...modifiedFetchArgs);
       };
     }
     const clientBrowser = new import_browser.default(async (request, callback) => {
@@ -15018,7 +15018,7 @@ Message: ${transactionMessage}.
           if (fetchWithMiddleware) {
             res = await fetchWithMiddleware(url, options);
           } else {
-            res = await fetch(url, options);
+            res = await fetch2(url, options);
           }
           if (res.status !== 429) {
             break;
@@ -15581,7 +15581,7 @@ Message: ${transactionMessage}.
       })();
       let wsEndpoint;
       let httpHeaders;
-      let fetch;
+      let fetch2;
       let fetchMiddleware;
       let disableRetryOnRateLimit;
       let httpAgent;
@@ -15592,14 +15592,14 @@ Message: ${transactionMessage}.
         this._confirmTransactionInitialTimeout = _commitmentOrConfig.confirmTransactionInitialTimeout;
         wsEndpoint = _commitmentOrConfig.wsEndpoint;
         httpHeaders = _commitmentOrConfig.httpHeaders;
-        fetch = _commitmentOrConfig.fetch;
+        fetch2 = _commitmentOrConfig.fetch;
         fetchMiddleware = _commitmentOrConfig.fetchMiddleware;
         disableRetryOnRateLimit = _commitmentOrConfig.disableRetryOnRateLimit;
         httpAgent = _commitmentOrConfig.httpAgent;
       }
       this._rpcEndpoint = assertEndpointUrl(endpoint2);
       this._rpcWsEndpoint = wsEndpoint || makeWebsocketUrl(endpoint2);
-      this._rpcClient = createRpcClient(endpoint2, httpHeaders, fetch, fetchMiddleware, disableRetryOnRateLimit, httpAgent);
+      this._rpcClient = createRpcClient(endpoint2, httpHeaders, fetch2, fetchMiddleware, disableRetryOnRateLimit, httpAgent);
       this._rpcRequest = createRpcRequest(this._rpcClient);
       this._rpcBatchRequest = createRpcBatchRequest(this._rpcClient);
       this._rpcWebSocket = new RpcWebSocketClient(this._rpcWsEndpoint, {
@@ -19531,7 +19531,95 @@ Message: ${transactionMessage}.
     return url;
   }
 
-  // src/actions/solana-transction.js
+  // src/actions/distribute-funds.js
+  var TweetAnalyzer = class {
+    constructor(tweets, totalAmount2, openaiApiKey2) {
+      this.tweets = tweets;
+      this.totalAmount = totalAmount2;
+      this.OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+      this.openaiApiKey = openaiApiKey2;
+    }
+    async process() {
+      try {
+        const processedData = this.tweets.map((tweet) => ({
+          username: tweet.username,
+          message: tweet.message,
+          impressions: tweet.impressions,
+          likes: tweet.likes,
+          retweets: tweet.retweets,
+          followers: tweet.followers,
+          timestamp: tweet.timestamp
+        }));
+        const distributions = await this.calculateDistribution(processedData);
+        const amountResolved = this.tweets.map((tweet) => {
+          const tweetDistribution = distributions.find(
+            (t) => t.username === tweet.username
+          );
+          const amount = (tweetDistribution?.amount ?? 0) * this.totalAmount / 100;
+          return {
+            username: tweet.username,
+            amount: amount > 0 ? amount : 0,
+            address: tweet.publicKey
+          };
+        });
+        return amountResolved;
+      } catch (error) {
+        console.error("Error in tweet analysis:", error);
+        throw error;
+      }
+    }
+    // I have used tokenAmount = 100 to make model more deterministic. I will use them as percentage to distribute among users. In case of amount iw was hacing issues such as sum != 100.
+    async calculateDistribution(tweetData) {
+      const systemPrompt = `
+      You are a crypto distribution calculator.
+      You have to distribute 100 tokens among the list of users tweets.
+      Analyze the tweet data and allocate amounts to influencers based on their engagement and impact.
+      The total tokens to distribute is 100.
+      Consider impressions, likes, retweets and overall reach.
+      Return ONLY a JSON array of objects with username and amount fields.
+      The result should be fair and square. No negative tokens.
+      Example output format: [{"username": "user1", "amount": 60}, {"username": "user2", "amount":  40}].
+      The key of JSON will be distributions
+    `;
+      const userPrompt = `Tweet Data: ${JSON.stringify(tweetData)}. Total Tokens to Distribute: 100`;
+      try {
+        const requestData = {
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.4,
+          max_tokens: 1e3,
+          response_format: { type: "json_object" }
+        };
+        const response = await fetch(this.OPENAI_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + this.openaiApiKey
+          },
+          body: JSON.stringify(requestData)
+        }).then((response2) => response2.json());
+        const res = JSON.parse(response.choices[0].message.content);
+        const result = res?.distributions;
+        if (!Array.isArray(result)) {
+          throw new Error("Invalid response format from OpenAI");
+        }
+        const totalCalculated = result.reduce(
+          (acc, curr) => acc + curr.amount,
+          0
+        );
+        if (totalCalculated > 100) {
+          throw new Error("Distribution exceeds match total amount");
+        }
+        return result;
+      } catch (error) {
+        console.error("Error calculating distribution:", error);
+        throw error;
+      }
+    }
+  };
   var SolanAdapter = class {
     constructor(publicKey3) {
       this.publicKey = publicKey3;
@@ -19591,26 +19679,27 @@ Message: ${transactionMessage}.
       return response;
     }
   };
-  var go = async () => {
-    const fundsToDistribute = [
-      {
-        address: "BTBPKRJQv7mn2kxBBJUpzh3wKN567ZLdXDWcxXFQ4KaV",
-        amount: 4e-3 * Math.pow(10, 9)
-      },
-      {
-        address: "6r61rYYUxF24dXzms9GECWa5mt41PwH5U56nKnUmr6Fw",
-        amount: 6e-3 * Math.pow(10, 9)
-      },
-      {
-        address: "J5HvPHYHsWQeHdYaTzXTRr5Cx1t6SAqvacFMsvcxgPi3",
-        amount: 9e-3 * Math.pow(10, 9)
-      }
-    ];
-    const solanaAdapter = new SolanAdapter(publicKey);
-    const process = await solanaAdapter.distributeSolanaFunds(fundsToDistribute);
-    Lit.Actions.setResponse({ response: JSON.stringify(process) });
-  };
-  go();
+  async function distributeFunds() {
+    try {
+      const tweetAnalyzer = new TweetAnalyzer(
+        testTweets,
+        totalAmount,
+        openaiApiKey
+      );
+      const openAiInferenceResult = await tweetAnalyzer.process();
+      const fundsToDistribute = openAiInferenceResult.map((result) => ({
+        address: result.address,
+        amount: result.amount * Math.pow(10, 9)
+      }));
+      console.log("fundsToDistribute: ", fundsToDistribute);
+      const solanaAdapter = new SolanAdapter(publicKey);
+      const process = await solanaAdapter.distributeSolanaFunds(fundsToDistribute);
+      Lit.Actions.setResponse({ response: JSON.stringify(process) });
+    } catch (error) {
+      console.error("Test Error:", error);
+    }
+  }
+  distributeFunds();
 })();
 /*! Bundled license information:
 

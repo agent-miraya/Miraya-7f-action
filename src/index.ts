@@ -21,6 +21,7 @@ const testTweets = [
     retweets: 120,
     followers: 50000,
     timestamp: "2024-01-15T10:30:00Z",
+    publicKey: "BTBPKRJQv7mn2kxBBJUpzh3wKN567ZLdXDWcxXFQ4KaV",
   },
   {
     username: "blockchain_guru",
@@ -30,6 +31,7 @@ const testTweets = [
     retweets: 85,
     followers: 30000,
     timestamp: "2024-01-15T11:00:00Z",
+    publicKey: "6r61rYYUxF24dXzms9GECWa5mt41PwH5U56nKnUmr6Fw",
   },
   {
     username: "defi_expert",
@@ -39,22 +41,14 @@ const testTweets = [
     retweets: 95,
     followers: 35000,
     timestamp: "2024-01-15T09:45:00Z",
-  },
-  {
-    username: "nft_collector",
-    message: "Check out this innovative approach to DeFi! #web3 #defi",
-    impressions: 12000,
-    likes: 180,
-    retweets: 60,
-    followers: 25000,
-    timestamp: "2024-01-15T12:15:00Z",
-  },
+    publicKey: "J5HvPHYHsWQeHdYaTzXTRr5Cx1t6SAqvacFMsvcxgPi3",
+  }
 ];
-const totalAmount = 100;
+const totalAmount = 0.1;
 
 async function createLitActionAndSignSolanaTxn() {
   // const litActionCode = await getBundledAction("solana-transction");
-  const litActionCode = await getBundledAction("openai");
+  const litActionCode = await getBundledAction("distribute-funds");
 
   // const response = await litWrapper.createSolanaWK(LIT_EVM_PRIVATE_KEY);
 
