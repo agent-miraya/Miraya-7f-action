@@ -1824,28 +1824,105 @@
     }
   });
 
-  // src/actions/open-ai-inferencing.js
+  // src/actions/openai.js
   init_esbuild_shims();
-  var go = async () => {
-    const apiUrl = "https://api.openai.com/v1/chat/completions";
-    const prompt = "Once upon a time";
-    const requestData = {
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: "Say this is a test!" }],
-      temperature: 0.7
-    };
-    const resp = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + openaiApiKey
-      },
-      body: JSON.stringify(requestData)
-    }).then((response) => response.json());
-    const answer = resp?.choices?.[0]?.message?.content;
-    console.log(answer);
+  var TweetAnalyzer = class {
+    constructor(tweets, totalAmount2, openaiApiKey2) {
+      this.tweets = tweets;
+      this.totalAmount = totalAmount2;
+      this.OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+      this.openaiApiKey = openaiApiKey2;
+    }
+    async process() {
+      try {
+        const processedData = this.tweets.map((tweet) => ({
+          username: tweet.username,
+          message: tweet.message,
+          impressions: tweet.impressions,
+          likes: tweet.likes,
+          retweets: tweet.retweets,
+          followers: tweet.followers,
+          timestamp: tweet.timestamp
+        }));
+        const distribution = await this.calculateDistribution(
+          processedData,
+          this.totalAmount
+        );
+        const validatedDistribution = this.validateDistribution(distribution);
+        return validatedDistribution;
+      } catch (error) {
+        console.error("Error in tweet analysis:", error);
+        throw error;
+      }
+    }
+    validateDistribution(distribution) {
+      const validatedDist = distribution.filter((dist) => {
+        return this.tweets.some((tweet) => tweet.username === dist.username);
+      });
+      validatedDist.forEach((dist) => {
+        if (dist.amount < 0) dist.amount = 0;
+      });
+      return validatedDist;
+    }
+    async calculateDistribution(tweetData, totalAmount2) {
+      const systemPrompt = `You are a crypto distribution calculator.
+      Analyze the tweet data and allocate amounts to influencers based on their engagement and impact.
+      The total amount to distribute is ${totalAmount2}.
+      Consider impressions, likes, retweets and overall reach.
+      Return ONLY a JSON array of objects with username and amount fields.
+      The result should be fair and square. No negative amounts.
+
+      Example format: [{"username": "user1", "amount": 100}, {"username": "user2", "amount": 200}].
+      The key of JSON will be distributions`;
+      const userPrompt = `Tweet Data: ${JSON.stringify(tweetData)}. Total Amount to Distribute: ${totalAmount2}`;
+      try {
+        const requestData = {
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 1e3,
+          response_format: { type: "json_object" }
+        };
+        const response = await fetch(this.OPENAI_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + this.openaiApiKey
+          },
+          body: JSON.stringify(requestData)
+        }).then((response2) => response2.json());
+        const res = JSON.parse(response.choices[0].message.content);
+        const result = res?.distributions;
+        if (!Array.isArray(result)) {
+          throw new Error("Invalid response format from OpenAI");
+        }
+        const totalCalculated = result.reduce(
+          (acc, curr) => acc + curr.amount,
+          0
+        );
+        if (totalCalculated > totalAmount2) {
+          throw new Error("Distribution exceeds match total amount");
+        }
+        return result;
+      } catch (error) {
+        console.error("Error calculating distribution:", error);
+        throw error;
+      }
+    }
   };
-  go();
+  async function testTweetAnalyzer() {
+    try {
+      const analyzer = new TweetAnalyzer(testTweets, totalAmount, openaiApiKey);
+      const result = await analyzer.process();
+      console.log("Distribution Result:", result);
+    } catch (error) {
+      console.error("Test Error:", error);
+    }
+  }
+  testTweetAnalyzer();
 })();
 /*! Bundled license information:
 

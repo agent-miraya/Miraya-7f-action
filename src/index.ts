@@ -12,19 +12,51 @@ if (!LIT_EVM_PRIVATE_KEY) {
   throw new Error("LIT_EVM_PRIVATE_KEY is required");
 }
 
+const testTweets = [
+  {
+    username: "crypto_whale",
+    message: "Just discovered this amazing new DeFi project! #crypto #defi",
+    impressions: 25000,
+    likes: 450,
+    retweets: 120,
+    followers: 50000,
+    timestamp: "2024-01-15T10:30:00Z",
+  },
+  {
+    username: "blockchain_guru",
+    message: "Great analysis on the latest market trends. Must read! #bitcoin",
+    impressions: 15000,
+    likes: 280,
+    retweets: 85,
+    followers: 30000,
+    timestamp: "2024-01-15T11:00:00Z",
+  },
+  {
+    username: "defi_expert",
+    message: "This project is revolutionizing the space! 🚀 #cryptocurrency",
+    impressions: 18000,
+    likes: 320,
+    retweets: 95,
+    followers: 35000,
+    timestamp: "2024-01-15T09:45:00Z",
+  },
+  {
+    username: "nft_collector",
+    message: "Check out this innovative approach to DeFi! #web3 #defi",
+    impressions: 12000,
+    likes: 180,
+    retweets: 60,
+    followers: 25000,
+    timestamp: "2024-01-15T12:15:00Z",
+  },
+];
+const totalAmount = 100;
+
 async function createLitActionAndSignSolanaTxn() {
-  const litActionCode = await getBundledAction("solana-transction");
+  // const litActionCode = await getBundledAction("solana-transction");
+  const litActionCode = await getBundledAction("openai");
 
   // const response = await litWrapper.createSolanaWK(LIT_EVM_PRIVATE_KEY);
-
-  // const txn = await litWrapper.createSerializedLitTxn({
-  //   wk: response?.wkInfo,
-  //   toAddress: "BTBPKRJQv7mn2kxBBJUpzh3wKN567ZLdXDWcxXFQ4KaV",
-  //   amount: 0.004 * Math.pow(10, 9),
-  //   network: "mainnet-beta",
-  //   flag: FlagForLitTxn.SOL,
-  // });
-  //
 
   const response = {
     pkpInfo: {
@@ -41,13 +73,7 @@ async function createLitActionAndSignSolanaTxn() {
     },
   };
 
-  const txn = {
-    serializedTransaction:
-      "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDNuNZ4hcMzIQCLj8MBjbZbKj1O0HEIQkWyM5flchylUabSbZgxIicCBSbv2IV40NSqs7TwnLZxxm0IudTAQDPxgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVZ/kSfx+ePFTtxzU4c6ooFTU92P/ti+oASUKyVgO1UUBAgIAAQwCAAAAAAk9AAAAAAA=",
-    chain: "mainnet-beta",
-  };
-
-  console.log({ txn, response });
+  console.log({ response });
 
   if (!response?.pkpInfo?.publicKey) {
     throw new Error("PKP public key not found in response");
@@ -61,26 +87,14 @@ async function createLitActionAndSignSolanaTxn() {
     pkp: response?.pkpInfo,
     wk: response?.wkInfo,
     params: {
-      openaiApiKey: "OPENAI_API_KEY",
+      openaiApiKey: OPENAI_API_KEY,
       publicKey: response?.wkInfo.generatedPublicKey,
+      testTweets,
+      totalAmount,
     },
   });
 
   console.log("Action is: ", actionResult);
-
-  // return;
-  // const checkResult = await litWrapper.conditionalSigningOnSolana({
-  //   userPrivateKey: LIT_EVM_PRIVATE_KEY,
-  //   litTransaction: txn,
-  //   conditionLogic: litActionCode,
-  //   broadcastTransaction: true,
-  //   wk: response?.wkInfo,
-  //   pkp: response?.pkpInfo,
-  //   params: {
-  //     openaiApiKey: OPENAI_API_KEY,
-  //   },
-  // });
-  // console.log(checkResult);
 }
 
 createLitActionAndSignSolanaTxn().then(() => console.log("completed"));

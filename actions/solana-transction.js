@@ -19532,54 +19532,66 @@ Message: ${transactionMessage}.
   }
 
   // src/actions/solana-transction.js
-  async function processMultipleTranstion({
-    network,
-    fundsToDistribute
-  }) {
-    const generatedSolanaPublicKey = new PublicKey(publicKey);
-    const solanaConnection = new Connection(clusterApiUrl(network), "confirmed");
-    const { blockhash } = await solanaConnection.getLatestBlockhash();
-    const solanaTransaction = new Transaction();
-    fundsToDistribute.forEach((fundObj) => {
-      const receiverPublicKey = new PublicKey(fundObj.address);
-      solanaTransaction.add(
-        SystemProgram.transfer({
-          fromPubkey: generatedSolanaPublicKey,
-          toPubkey: receiverPublicKey,
-          lamports: fundObj.amount
-        })
+  var SolanAdapter = class {
+    constructor(publicKey3) {
+      this.publicKey = publicKey3;
+    }
+    async createBatchTransaction({ network, fundsToDistribute }) {
+      const generatedSolanaPublicKey = new PublicKey(this.publicKey);
+      const solanaConnection = new Connection(
+        clusterApiUrl(network),
+        "confirmed"
       );
-    });
-    solanaTransaction.feePayer = generatedSolanaPublicKey;
-    solanaTransaction.recentBlockhash = blockhash;
-    const serializedTransaction = solanaTransaction.serialize({
-      requireAllSignatures: false,
-      // should be false as we're not signing the message
-      verifySignatures: false
-      // should be false as we're not signing the message
-    }).toString("base64");
-    const litTransaction = {
-      serializedTransaction,
-      chain: network
-    };
-    return litTransaction;
-  }
-  var createSignatureWithAction = async (unsignedTransaction) => {
-    const response = await Lit.Actions.call({
-      ipfsId: "QmR1nPG2tnmC72zuCEMZUZrrMEkbDiMPNHW45Dsm2n7xnk",
-      // Lit Action for signing on Solana
-      params: {
-        accessControlConditions,
-        ciphertext,
-        dataToEncryptHash,
-        unsignedTransaction,
-        broadcast
-      }
-    });
-    console.log(response);
-    return response;
+      const { blockhash } = await solanaConnection.getLatestBlockhash();
+      const solanaTransaction = new Transaction();
+      fundsToDistribute.forEach((fundObj) => {
+        const receiverPublicKey = new PublicKey(fundObj.address);
+        solanaTransaction.add(
+          SystemProgram.transfer({
+            fromPubkey: generatedSolanaPublicKey,
+            toPubkey: receiverPublicKey,
+            lamports: fundObj.amount
+          })
+        );
+      });
+      solanaTransaction.feePayer = generatedSolanaPublicKey;
+      solanaTransaction.recentBlockhash = blockhash;
+      const serializedTransaction = solanaTransaction.serialize({
+        requireAllSignatures: false,
+        // should be false as we're not signing the message
+        verifySignatures: false
+        // should be false as we're not signing the message
+      }).toString("base64");
+      const litTransaction = {
+        serializedTransaction,
+        chain: network
+      };
+      return litTransaction;
+    }
+    async createSignatureWithAction(unsignedTransaction) {
+      const response = await Lit.Actions.call({
+        ipfsId: "QmR1nPG2tnmC72zuCEMZUZrrMEkbDiMPNHW45Dsm2n7xnk",
+        // Lit Action for signing on Solana
+        params: {
+          accessControlConditions,
+          ciphertext,
+          dataToEncryptHash,
+          unsignedTransaction,
+          broadcast
+        }
+      });
+      return response;
+    }
+    async distributeSolanaFunds(fundsToDistribute) {
+      const transaction = await this.createBatchTransaction({
+        network: "devnet",
+        fundsToDistribute
+      });
+      const response = await this.createSignatureWithAction(transaction);
+      return response;
+    }
   };
-  var distributeSolanaFunds = async () => {
+  var go = async () => {
     const fundsToDistribute = [
       {
         address: "BTBPKRJQv7mn2kxBBJUpzh3wKN567ZLdXDWcxXFQ4KaV",
@@ -19594,16 +19606,8 @@ Message: ${transactionMessage}.
         amount: 9e-3 * Math.pow(10, 9)
       }
     ];
-    const t = await processMultipleTranstion({
-      network: "devnet",
-      fundsToDistribute
-    });
-    console.log("t", t);
-    const response = await createSignatureWithAction(t);
-    return response;
-  };
-  var go = async () => {
-    const process = await distributeSolanaFunds();
+    const solanaAdapter = new SolanAdapter(publicKey);
+    const process = await solanaAdapter.distributeSolanaFunds(fundsToDistribute);
     Lit.Actions.setResponse({ response: JSON.stringify(process) });
   };
   go();
