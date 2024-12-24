@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node scripts/esbuild && npx tsx src/index.ts"
+    "test": "node scripts/test",
+    "start": "node scripts/esbuild && npm run test"
   },
   "keywords": [],
   "author": "",
