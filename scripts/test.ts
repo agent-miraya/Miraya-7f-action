@@ -1,6 +1,5 @@
 import { LitWrapper } from "lit-wrapper-sdk";
-import { FlagForLitTxn } from "lit-wrapper-sdk/types";
-import { getBundledAction } from "./utils";
+import { getBundledAction } from "../src/utils";
 import "dotenv/config";
 
 const litWrapper = new LitWrapper("datil-dev");
